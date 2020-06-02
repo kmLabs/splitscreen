@@ -1,0 +1,475 @@
+<html>
+
+<head>
+
+  <meta charset='utf-8' />
+  <title> km.L </title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://api.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.css' rel='stylesheet' />
+  <link rel="stylesheet" type="text/css" href="style_Midcentury_SplitScreen.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+
+
+
+
+</head>
+
+
+<body>
+
+  <div id='mapLeft'></div>
+  <div id='mapRight'></div>
+
+  <div id='console'>
+    <img src ='kmLABS_LOGOwhite.png' alt = 'km.L'
+                                 style = 'width:105px;height:32px;margin-top:5px;'>
+    <!--legend -->
+
+    <div class='session'>
+
+      <div id = 'CtoFconverter' class = 'CtoF'>
+        <h2>Temperature</h2>
+        <form style="display: inline-block">
+            <input  type="radio" name="CtoFbutton" value="celcius" checked> &deg;C
+            <input  type="radio" name="CtoFbutton" value="satellite"> &deg;F
+        </form>
+      </div>
+
+      <div class = "scale">
+        <div class = "color" style = "background: #fef0d9"></div>
+        <div class = "color" style = "background: #fdcc8a"></div>
+        <div class = "color" style = "background: #fc8d59"></div>
+        <div class = "color" style = "background: #e34a33"></div>
+        <div class = "color" style = "background: #b30000"></div>
+      </div>
+
+
+      <div class='scale'>
+        <div id = 'tempClass1' class='tempLabel'>7</div>
+        <div id = 'tempClass2' class='tempLabel'>12</div>
+        <div id = 'tempClass3' class='tempLabel'>17</div>
+        <div id = 'tempClass4'class='tempLabel'>22</div>
+        <div id = 'tempClass5' class='tempLabel'>27</div>
+      </div>
+
+
+      <div class= 'scale'></div>
+
+
+
+      <div class='session' id='sliderbar'>
+          <h3>Active Layer: <label id='active-timestamp'>Current</label></h3>
+          <input id='slider' class='sliderConst' type='range' min='0' max='1' step='1' value='0' />
+          <!--<div class= 'scale'>-->
+          </div>
+      </div>
+
+
+      <div class='dynamicData' id='hoverinfo'>
+ 			    <h3>Active Layer Cell Value: <label id='hover-cell'>N/A</label></h3>
+ 	    </div>
+
+      <div class='dynamicData' id='firstLayerValue'><h2>Current &nbsp; <label id='hover-cell-1'>N/A</label></h2><div class='movableBar' id='movableBar1'></div></div>
+      <div class='dynamicData' id='secondLayerValue'><h2>MidCen  &nbsp;<label id='hover-cell-2'>N/A</label></h2><div class='movableBar' id='movableBar2'></div></div>
+
+
+</div>
+
+    <div id = 'consoleControl'><div id = 'ccText' class = 'consoleControlText'>Hide</div></div>
+
+  <script src="sources.js"></script>
+  <script src="layers.js"></script>
+
+
+
+  <script>
+  mapboxgl.accessToken = 'pk.eyJ1Ijoibm9haC1iIiwiYSI6ImNqbm5qNjdpcjA2dTczdnBna3o3NGVtdm4ifQ.Y-VCtr3LTcEgYsaYe4rt3A';
+
+
+//NEW SYNC MAP TEST ZONE
+var mapboxgl = require('mapbox-gl');
+var syncMove = require('mapbox-gl-sync-move');
+
+
+
+  var map = new mapboxgl.Map({
+  container: 'mapLeft', // container element id
+  style: 'mapbox://styles/noah-b/cjqztjm4f02h22qmpf3hvvk63',
+  center: [ -117.838,33.458], // initial map center in [lon, lat]
+  zoom: 7.8
+  });
+
+
+//GLOBAL VARIABLES
+var GlobalLat = -117.838;
+var GlobalLong = 33.458;
+var GlobalZoom = 7.8;
+
+
+
+//load the tileset
+map.on('load', function() {
+
+  var layers = map.getStyle().layers;
+  var layer_IDs = [];
+  var maxValue = 37; //this should change for each dataset
+  var minValue = 3; //this should change for each dataset
+  var barWidth = 100; //measured in px, should change if legend is changed
+
+
+
+//add 3-D
+var labelLayerId;
+  for (var i = 0; i < layers.length; i++) {
+      if (layers[i].type === 'symbol' && layers[i].layout['text-field']) {
+          labelLayerId = layers[i].id;
+          break;
+        }
+}
+
+
+   // Find the index of the first symbol layer in the map style
+   var firstSymbolId;
+
+   firstSymbolId = 'waterway-label';
+
+
+    //load map sources
+    mapSources.forEach(function(source) {
+        let id = source[0];
+        let obj = source[1];
+        map.addSource(id, obj)
+      });
+
+    //load map layers
+    mapLayers.forEach(function(layer) {
+        let obj = layer[0];
+        map.addLayer(obj, firstSymbolId);
+        layer_IDs.push(obj.id); //adds names of all layers to an array
+      });
+
+
+
+
+      map.addLayer({
+        'id': '3d-buildings',
+        'source': 'composite',
+        'source-layer': 'building',
+        'filter': ['==', 'extrude', 'true'],
+        'type': 'fill-extrusion',
+        'minzoom': 15,
+        'light': {"intensity":0.5,"anchor":"viewport"},
+        'paint': {
+            'fill-extrusion-color': 'white',
+            // use an 'interpolate' expression to add a smooth transition effect to the
+            // buildings as the user zooms in
+            'fill-extrusion-height': [
+            "interpolate", ["linear"], ["zoom"],
+            15, 0,
+            15.05, ["get", "height"]
+            ],
+            'fill-extrusion-base': [
+            "interpolate", ["linear"], ["zoom"],
+            15, 0,
+            15.05, ["get", "min_height"]
+            ],
+            'fill-extrusion-opacity': 0.85,
+
+            }
+      }, firstSymbolId);
+
+
+
+    //makes first layer visible at start
+    map.setPaintProperty(layer_IDs[0], 'fill-opacity',0.65);
+
+    //experiemental area
+
+
+
+
+    //Changes the layer visible via slider and sets a new active-timestamp
+    document.getElementById('slider').addEventListener('input', function(e) {
+        var time_selection = parseInt(e.target.value); //time_selection gets what number the slider is on
+        var selected_layer; //selected_layer gets layer ID
+        var active_layer; // layer that is completely visible
+
+        if (time_selection === 1){
+          active_layer = "temp-current-v3";
+          selected_layer = "temp-midcentury-v3";
+          document.getElementById('active-timestamp').innerText = "Midcentury"; //changes number next to timestamp
+
+        }
+        else if (time_selection === 0){
+          active_layer = "temp-midcentury-v3";
+          selected_layer = "temp-current-v3";
+          document.getElementById('active-timestamp').innerText = "Current"; //changes number next to timestamp
+
+        }
+        else {
+          console.log("ERR on slider grab")
+        }
+
+
+
+
+        for (var i = 0; i < layer_IDs.length; i++){
+          var ID = layer_IDs[i];
+          if (ID === selected_layer){ //TRY CHANGING THIS TO FEATURE STATE
+            map.setPaintProperty(selected_layer, 'fill-opacity', 0.65);
+          }
+        }
+        map.setPaintProperty(active_layer, 'fill-opacity', 0);
+        console.log(active_layer);
+
+        //change color of 3-D layer
+        //Need to loop through and change every grid id to its own color
+        var buildingLayer = '3d-buildings';
+        var features = map.queryRenderedFeatures(e.point, {layers: [selected_layer]}); //returns an array of objects
+        var features1 = map.queryRenderedFeatures(e.point, {layers: ['3d-buildings']}); //returns an array of objects
+
+        var myFeatures = map.querySourceFeatures('composite',
+     {
+         sourceLayer: 'building',
+        // i'm confident there is data matching this filter
+         filter: ["==", "type", "feature"]
+     }
+     );
+     console.log(features[0]);
+     console.log(features1[0]);
+     console.log(features1[0]._vectorTileFeature._x + " = x-coordinate"); //
+     console.log(features1.length);
+
+        var gridcodeNum = features[0].properties.temp; //changed from gridcode to temp
+        var buildingColor = detGridColor(gridcodeNum);
+        map.setPaintProperty('3d-buildings', 'fill-extrusion-color', buildingColor);
+
+
+    console.log(map.getLayer(features));
+
+
+
+
+
+  });
+
+
+function detGridColor(gridNum){
+  var newColor = "";
+  switch (true){
+    case gridNum<timeSeriesStops[0]:
+        newColor = timeSeriesColors[0];
+        break;
+    case gridNum<timeSeriesStops[1]:
+      newColor = timeSeriesColors[1];
+      break;
+    case gridNum<timeSeriesStops[2]:
+      newColor = timeSeriesColors[2];
+      break;
+    case gridNum<timeSeriesStops[3]:
+      newColor = timeSeriesColors[3];
+      break;
+    case gridNum>=timeSeriesStops[3]:
+      newColor = timeSeriesColors[4];
+      break;
+  }
+  return newColor;
+}
+
+
+//changes legend color bar values
+  document.getElementById('CtoFconverter').addEventListener("click", function(){
+    if (document.getElementsByName('CtoFbutton')[0].checked){
+      document.getElementById("tempClass1").innerHTML = "7";
+      document.getElementById("tempClass2").innerHTML = "14";
+      document.getElementById("tempClass3").innerHTML = "21";
+      document.getElementById("tempClass4").innerHTML = "28";
+      document.getElementById("tempClass5").innerHTML = "??";
+    }
+    else{
+      document.getElementById("tempClass1").innerHTML = "44.6";
+      document.getElementById("tempClass2").innerHTML = "53.6";
+      document.getElementById("tempClass3").innerHTML = "62.6";
+      document.getElementById("tempClass4").innerHTML = "71.6";
+      document.getElementById("tempClass5").innerHTML = "80.6";
+
+
+
+    }
+  });
+
+//Makes the legend vidible or hidden
+  var consoleStatus = "visible";
+  document.getElementById("consoleControl").addEventListener("click", function(){
+
+    //if visible, make invisible and move button
+    if (consoleStatus === "visible"){
+      document.getElementById("console").style.visibility = "hidden";
+      document.getElementById("consoleControl").style.left = "20px";
+      document.getElementById("ccText").innerHTML = "Show";
+      consoleStatus = "hidden";
+    }
+    //otherwise, make visible and move button back
+    else{
+      document.getElementById("consoleControl").style.left = "300px";
+      document.getElementById("console").style.visibility = "visible";
+      document.getElementById("ccText").innerHTML = "Hide";
+      consoleStatus = "visible";
+
+    }
+  });
+
+  //Change mouse cursor from pointer to arrow
+  map.getCanvas().style.cursor = 'default';
+
+
+//Gets value of cell hovered over
+	map.on('mousemove', 'temp-current-v3' , function (e) { //'temp-current-v3 is arbitrary
+    //Gets value for active layer
+    //only needed here for hover
+    var active_layer = document.getElementById('active-timestamp').innerText;
+//added
+
+
+
+    for (var i = 0; i < layer_IDs.length; i++){
+      var visibleValue;
+      //var current_layer = 'time-series' + (i+1);
+      var current_layer = layer_IDs[i];
+      var divID = 'hover-cell-' + (i+1);
+      var features = map.queryRenderedFeatures(e.point, {layers: [current_layer]}); //returns an array of objects
+      console.log(features[0]);
+      var cell_value = features[0].properties.temp; //accesses gridcode object (CHANGED TO TEMP)
+      var Cvalue = cell_value.toFixed(2) + "&deg;C"; //puts together celcius
+      var Fvalue = (cell_value*1.8 + 32).toFixed(2) + "&deg;F"; //puts together farenheight
+
+      // sets the dynamic values to celcius or farenheight
+      if (document.getElementsByName('CtoFbutton')[0].checked){
+        visibleValue = Cvalue;
+      }
+      else{
+        visibleValue = Fvalue;
+      }
+      document.getElementById(divID).innerHTML = visibleValue;
+
+
+      //Change movable bar length
+      var barPercentage = (cell_value - minValue)/(maxValue - minValue)*barWidth;
+      var newBarWidth = barPercentage + "px";
+      var barID = "movableBar" + (i+1);
+      document.getElementById(barID).style.width = newBarWidth;
+
+      //change movable bar color
+      var newColor = "";
+      switch (true){
+        case cell_value<timeSeriesStops[0]:
+            newColor = timeSeriesColors[0];
+            break;
+        case cell_value<timeSeriesStops[1]:
+          newColor = timeSeriesColors[1];
+          break;
+        case cell_value<timeSeriesStops[2]:
+          newColor = timeSeriesColors[2];
+          break;
+        case cell_value<timeSeriesStops[3]:
+          newColor = timeSeriesColors[3];
+          break;
+        case cell_value>=timeSeriesStops[3]:
+          newColor = timeSeriesColors[4];
+          break;
+      }
+      document.getElementById(barID).style.backgroundColor = newColor;
+
+
+      //change "active_layer" value
+      if (current_layer === active_layer){
+        document.getElementById('hover-cell').innerHTML = visibleValue;
+      }
+
+    }
+
+	});
+});
+
+
+
+    //Added for mapRight
+      var mapRight = new mapboxgl.Map({
+      container: 'mapRight', // container element id
+      style: 'mapbox://styles/noah-b/cjqztjm4f02h22qmpf3hvvk63',
+      center: [ -117.838,33.458], // initial map center in [lon, lat]
+      zoom: 7.8
+      });
+
+
+      mapRight.on('load', function() {
+
+        var layers = mapRight.getStyle().layers;
+        var layer_IDs = [];
+        var maxValue = 37; //this should change for each dataset
+        var minValue = 3; //this should change for each dataset
+        var barWidth = 100; //measured in px, should change if legend is changed
+
+
+
+      //add 3-D
+      var labelLayerId;
+        for (var i = 0; i < layers.length; i++) {
+            if (layers[i].type === 'symbol' && layers[i].layout['text-field']) {
+                labelLayerId = layers[i].id;
+                break;
+              }
+      }
+
+
+         // Find the index of the first symbol layer in the map style
+         var firstSymbolId;
+
+         firstSymbolId = 'waterway-label';
+
+
+          //load map sources
+          mapSources2.forEach(function(source) {
+              let id = source[0];
+              let obj = source[1];
+              mapRight.addSource(id, obj)
+            });
+
+          //load map layers
+          mapLayersRight.forEach(function(layer) {
+              let obj = layer[0];
+              mapRight.addLayer(obj, firstSymbolId);
+              layer_IDs.push(obj.id); //adds names of all layers to an array
+            });
+
+
+
+
+
+          //makes first layer visible at start
+          mapRight.setPaintProperty(layer_IDs[0], 'fill-opacity',0.65);
+          console.log("checkpoint1");
+
+          document.getElementById('slider').addEventListener('input', function(e) {
+            console.log("checkpoint2");
+          mapRight.jumpTo({
+            center: [GlobalLat, GlobalLong],
+            zoom: GlobalZoom});
+          });
+
+            //https://docs.mapbox.com/mapbox-gl-js/api/#map#on
+
+});
+
+
+//NEW SYNC MAP TEST
+syncMove(map, mapRight);
+
+
+
+
+  </script>
+
+</body>
+</html>
