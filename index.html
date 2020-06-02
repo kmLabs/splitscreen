@@ -7,6 +7,7 @@
   <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
   <script src='https://api.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.js'></script>
   <link href='https://api.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.css' rel='stylesheet' />
+  <script src='mapbox-gl-sync-move.js'></script>
   <link rel="stylesheet" type="text/css" href="style_Midcentury_SplitScreen.css">
   <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
 
@@ -88,8 +89,8 @@
 
 
 //NEW SYNC MAP TEST ZONE
-var mapboxgl = require('mapbox-gl');
-var syncMove = require('mapbox-gl-sync-move');
+//var mapboxgl = require('mapbox-gl');
+//var syncMove = require('mapbox-gl-sync-move');
 
 
 
@@ -464,7 +465,7 @@ function detGridColor(gridNum){
 
 
 //NEW SYNC MAP TEST
-syncMove(map, mapRight);
+syncMaps(map, mapRight);
 
 
 
